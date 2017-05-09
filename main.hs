@@ -1,9 +1,46 @@
 --ghc 7.10
 
 import Data.List
-import Data.Random
+import System.Random
+import Control.Applicative
+
+shuffle :: [a] -> IO [a]
+shuffle [] = return []
+shuffle lst = do
+    (e, rest) <- pickElem <$> getIx
+    (e:) <$> shuffle rest
+    where
+    getIx = getStdRandom $ randomR (1, length lst)
+    pickElem n = case splitAt n lst of
+        ([], s) -> error $ "failed at index " ++ show n -- should never match
+        (r, s)  -> (last r, init r ++ s)
 
 data List a = Empty | Link a (List a) | Concat (List a) (List a) | Append (List a) a
+
+-- Why not abstract over List with a Tree, what do we lose?
+data Tree a = Leaf a | Branch (Tree a) (Tree a)
+
+{-
+extend List a with
+    Concat (List a) (List a)
+    where
+        Concat Empty ys       = ys
+        Concat xs Empty       = xs
+        Concat (Link x xs) ys = Link x (Concat xs ys)
+
+extend List a with
+    Append (List a) a
+    where
+        Append Empty y       = Link y Empty
+        Append (Link x xs) y = Link x (Append xs y)
+
+last' Empty             = Nothing
+last' (Append xs y)     = Just y
+last' (Concat xs Empty) = last' xs
+last' (Concat xs ys)    = last' ys
+last' (Link x Empty)    = Just x
+last' (Link x xs)       = last' xs
+-}
 
 instance Show a => Show (List a) where
     show Empty            = "-|"
@@ -28,9 +65,11 @@ instance Show a => Show (List a) where
             show' (Append xs x)    = show' xs ++ " -> " ++ show x
 
 --extend List a where
---    Concat :: List a -> List a -> List a
---    Concat Empty ys    = ys
---    Concat xs    Empty = xs
+--    Concat Empty ys           = ys
+--    Concat xs    Empty        = xs
+--    Concat (Link x xs)    ys) = Link x (Concat xs ys)
+--    Concat (Append xs x)  ys) = Concat xs (Concat (Link x Empty) ys)
+--    Concat (Concat xs zs) ys) = Concat xs (Concat zs ys)
 --    Append (List a) a =
 
 last' Empty              = Nothing
@@ -67,8 +106,9 @@ main = do
     --let els = Append (Concat (Concat (Append (convert' "Hello") '@') (convert' " World")) $ convert' "!!") $ 'x'
     --print els
     --print ( flatten' els )
-    let els = shuffle [1..10000]
+    els <- shuffle [1..10000]
     
-    print ( flatten' . quickSort' $ els )
-    --print ( convert' . quickSort $ els )
-    --print ( convert' . sort $ els )
+    --print ( flatten' . quickSort' els )
+    --print ( convert' . quickSort els )
+    --print ( convert' . sort els )
+    print ( sort els )
